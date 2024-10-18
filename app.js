@@ -28,7 +28,8 @@ const addController = (req, res) => {
 const subjectsController = async (req, res) => {
     const id = req.params.id; // Undefined in the case of the /api/subjects endpoint 
     // Build SQL
-    const table = '(Subjects LEFT JOIN Users ON Subjects.SubjectLecturerID=Users.UserID)';    const whereField = 'SubjectID';
+    const table = '(Subjects LEFT JOIN Users ON Subjects.SubjectLecturerID=Users.UserID)';    
+    const whereField = 'SubjectID';
     const fields = ['SubjectID', 'SubjectName', 'SubjectImageURL', 'SubjectLecturerID', 'Users.UserName AS SubjectLecturerName'];
     const extendedTable = `${table}`;
     const extendedFields = `${fields}`;
@@ -61,7 +62,8 @@ const subjectsController = async (req, res) => {
 const subjectsOfLecturerController = async (req, res) => {
     const id = req.params.id;  
     // Build SQL
-    const table = '(Subjects LEFT JOIN Users ON Subjects.SubjectLecturerID=Users.UserID)';    const whereField = 'SubjectLecturerID';
+    const table = '(Subjects LEFT JOIN Users ON Subjects.SubjectLecturerID=Users.UserID)';    
+    const whereField = 'SubjectLecturerID';
     const fields = ['SubjectID', 'SubjectName', 'SubjectImageURL', 'SubjectLecturerID', 'Users.UserName AS SubjectLecturerName'];
     const extendedTable = `${table}`;
     const extendedFields = `${fields}`;
