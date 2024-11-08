@@ -38,114 +38,64 @@ const addController = (req, res) => {
 };
 
 // Actual DB controllers:
-const subjectsController = async (req, res) => {
+const buildSubjectsSelectSql = (id, variant) => {
+  let sql = "";
+
+  const table =
+    "(Subjects LEFT JOIN Users ON Subjects.SubjectLecturerID=Users.UserID)";
+  const fields = [
+    "SubjectID",
+    "SubjectName",
+    "SubjectImageURL",
+    "SubjectLecturerID",
+    "Users.UserName AS SubjectLecturerName",
+  ];
+
+  switch (variant) {
+    case "lecturer":
+      sql = `SELECT ${fields} FROM ${table} WHERE SubjectLecturerID=${id}`;
+      break;
+    case "users":
+      const extendedTable = `Userenrollment INNER JOIN ${table} ON Userenrollment.UserenrollmentSubjectID = Subjects.SubjectID`;
+      sql = `SELECT ${fields} FROM ${extendedTable} WHERE Userenrollment.UserenrollmentUserID=${id}`;
+      break;
+    default:
+      sql = `SELECT ${fields} FROM ${table}`;
+      if (id) sql += ` WHERE SubjectID=${id}`;
+  }
+
+  return sql;
+};
+
+const read = async (selectSql) => {
+  try {
+    const [result] = await database.query(selectSql);
+    return result.length === 0
+      ? { isSuccess: false, result: null, message: "No record(s) found" }
+      : {
+          isSuccess: true,
+          result: result,
+          message: "Record(s) successfully recovered",
+        };
+  } catch (error) {
+    return {
+      isSuccess: false,
+      result: null,
+      message: `Failed to execute query: ${error.message}`,
+    };
+  }
+};
+
+const getSubjectsController = async (req, res, variant) => {
   const id = req.params.id; // Undefined in the case of the /api/subjects endpoint
-  // Build SQL
-  const table =
-    "(Subjects LEFT JOIN Users ON Subjects.SubjectLecturerID=Users.UserID)";
-  const whereField = "SubjectID";
-  const fields = [
-    "SubjectID",
-    "SubjectName",
-    "SubjectImageURL",
-    "SubjectLecturerID",
-    "Users.UserName AS SubjectLecturerName",
-  ];
-  const extendedTable = `${table}`;
-  const extendedFields = `${fields}`;
-  let sql = `SELECT ${extendedFields} FROM ${extendedTable}`;
 
-  if (id) sql += ` WHERE ${whereField} = ${id}`;
-
-  // Execute query
-  let isSuccess = false;
-  let message = "";
-  let result = null;
-  try {
-    [result] = await database.query(sql);
-    if (result.length === 0) message = "No record(s) found";
-    else {
-      isSuccess = true;
-      message = "Record(s) successfully recovered";
-    }
-  } catch (error) {
-    message = `Failed to execute query: ${error.message}`;
-  }
+  // Access data
+  const sql = buildSubjectsSelectSql(id, variant);
+  const { isSuccess, result, message } = await read(sql);
+  if (!isSuccess) return res.status(404).json({ message });
 
   // Responses
-  isSuccess ? res.status(200).json(result) : res.status(400).json({ message });
-};
-
-const subjectsOfLecturerController = async (req, res) => {
-  const id = req.params.id;
-  // Build SQL
-  const table =
-    "(Subjects LEFT JOIN Users ON Subjects.SubjectLecturerID=Users.UserID)";
-  const whereField = "SubjectLecturerID";
-  const fields = [
-    "SubjectID",
-    "SubjectName",
-    "SubjectImageURL",
-    "SubjectLecturerID",
-    "Users.UserName AS SubjectLecturerName",
-  ];
-  const extendedTable = `${table}`;
-  const extendedFields = `${fields}`;
-  const sql = `SELECT ${extendedFields} FROM ${extendedTable} WHERE ${whereField} = ${id}`;
-
-  // Execute query
-  let isSuccess = false;
-  let message = "";
-  let result = null;
-  try {
-    [result] = await database.query(sql);
-    if (result.length === 0) message = "No record(s) found";
-    else {
-      isSuccess = true;
-      message = "Record(s) successfully recovered";
-    }
-  } catch (error) {
-    message = `Failed to execute query: ${error.message}`;
-  }
-
-  // Responses
-  isSuccess ? res.status(200).json(result) : res.status(400).json({ message });
-};
-
-const subjectsOfUserController = async (req, res) => {
-  const id = req.params.id;
-  // Build SQL
-  const table =
-    "(Subjects LEFT JOIN Users ON Subjects.SubjectLecturerID=Users.UserID)";
-  const whereField = "Userenrollment.UserenrollmentUserID";
-  const fields = [
-    "SubjectID",
-    "SubjectName",
-    "SubjectImageURL",
-    "SubjectLecturerID",
-    "Users.UserName AS SubjectLecturerName",
-  ];
-  const extendedTable = `Userenrollment INNER JOIN ${table} ON Userenrollment.UserenrollmentSubjectID = Subjects.SubjectID`;
-  const extendedFields = `${fields}`;
-  const sql = `SELECT ${extendedFields} FROM ${extendedTable} WHERE ${whereField} = ${id}`;
-
-  // Execute query
-  let isSuccess = false;
-  let message = "";
-  let result = null;
-  try {
-    [result] = await database.query(sql);
-    if (result.length === 0) message = "No record(s) found";
-    else {
-      isSuccess = true;
-      message = "Record(s) successfully recovered";
-    }
-  } catch (error) {
-    message = `Failed to execute query: ${error.message}`;
-  }
-
-  // Responses
-  isSuccess ? res.status(200).json(result) : res.status(400).json({ message });
+  res.status(200).json(result);
 };
 
 // Endpoints ------------------------------------
@@ -153,14 +103,22 @@ const subjectsOfUserController = async (req, res) => {
 app.get("/hello", helloController);
 app.get("/add/:var1,:var2", addController);
 
-// Actual DB endpoints:
-app.get("/api/subjects", subjectsController);
-app.get("/api/subjects/:id", subjectsController);
-app.get("/api/subjects/lecturer/:id", subjectsOfLecturerController);
-app.get("/api/subjects/users/:id", subjectsOfUserController);
+// Actual DB Subject endpoints:
+app.get("/api/subjects", (req, res) => getSubjectsController(req, res, null));
+app.get("/api/subjects/:id", (req, res) =>
+  getSubjectsController(req, res, null)
+);
+app.get("/api/subjects/lecturer/:id", (req, res) =>
+  getSubjectsController(req, res, "lecturer")
+);
+app.get("/api/subjects/users/:id", (req, res) =>
+  getSubjectsController(req, res, "users")
+);
 
 //Alternative endpoint syntax:
-app.get("/api/users/:id/subjects", subjectsOfUserController);
+app.get("/api/users/:id/subjects", (req, res) =>
+  getSubjectsController(req, res, null)
+);
 
 // Start Server ---------------------------------
 const PORT = process.env.PORT || 5000;
