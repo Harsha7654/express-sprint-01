@@ -19,6 +19,8 @@ app.use(function (req, res, next) {
 });
 
 app.use(cors({ origin: "*" }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Controllers ----------------------------------
 // Examples to help understand basics:
@@ -67,6 +69,17 @@ const buildSubjectsSelectSql = (id, variant) => {
   return sql;
 };
 
+const buildSubjectsInsertSql = (record) => {
+  let table = "Subjects";
+  const mutableFields = ["SubjectName", "SubjectImageURL", "SubjectLecturerID"];
+
+  return `INSERT INTO ${table} SET
+            SubjectName="${record["SubjectName"]}",
+            SubjectImageURL="${record["SubjectImageURL"]}",
+            SubjectLecturerID="${record["SubjectLecturerID"]}",
+  `;
+};
+
 const read = async (selectSql) => {
   try {
     const [result] = await database.query(selectSql);
@@ -76,6 +89,32 @@ const read = async (selectSql) => {
           isSuccess: true,
           result: result,
           message: "Record(s) successfully recovered",
+        };
+  } catch (error) {
+    return {
+      isSuccess: false,
+      result: null,
+      message: `Failed to execute query: ${error.message}`,
+    };
+  }
+};
+
+const create = async (sql) => {
+  try {
+    const status = await database.query(sql);
+    const recoverRecordSql = buildSubjectsSelectSql(status[0].insertId, null);
+    const { isSuccess, result, message } = await read(recoverRecordSql);
+
+    return isSuccess
+      ? {
+          isSuccess: true,
+          result: result,
+          message: "Record successfully recovered",
+        }
+      : {
+          isSuccess: false,
+          result: null,
+          message: `Failed to recover the inserted record: ${message}`,
         };
   } catch (error) {
     return {
@@ -98,6 +137,18 @@ const getSubjectsController = async (req, res, variant) => {
   res.status(200).json(result);
 };
 
+const postSubjectsController = async (req, res) => {
+  //const id = req.params.id; // Undefined in the case of the /api/subjects endpoint
+
+  // Access data
+  const sql = buildSubjectsInsertSql(req.body);
+  const { isSuccess, result, message } = await create(sql);
+  if (!isSuccess) return res.status(404).json({ message });
+
+  // Responses
+  res.status(201).json(result);
+};
+
 // Endpoints ------------------------------------
 // Examples to help understand basics:
 app.get("/hello", helloController);
@@ -114,6 +165,8 @@ app.get("/api/subjects/lecturer/:id", (req, res) =>
 app.get("/api/subjects/users/:id", (req, res) =>
   getSubjectsController(req, res, "users")
 );
+
+app.post("/api/subjects", postSubjectsController);
 
 //Alternative endpoint syntax:
 app.get("/api/users/:id/subjects", (req, res) =>
