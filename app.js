@@ -69,15 +69,18 @@ const buildSubjectsSelectSql = (id, variant) => {
   return sql;
 };
 
+const buildSetFields = (fields) =>
+  fields.reduce(
+    (setSQL, field, index) =>
+      setSQL + `${field}=:${field}` + (index === fields.length - 1 ? "" : ", "),
+    "SET "
+  );
+
 const buildSubjectsInsertSql = (record) => {
   let table = "Subjects";
   const mutableFields = ["SubjectName", "SubjectImageURL", "SubjectLecturerID"];
 
-  return `INSERT INTO ${table} SET
-            SubjectName="${record["SubjectName"]}",
-            SubjectImageURL="${record["SubjectImageURL"]}",
-            SubjectLecturerID="${record["SubjectLecturerID"]}"
-  `;
+  return `INSERT INTO ${table} ` + buildSetFields(mutableFields);
 };
 
 const read = async (selectSql) => {
@@ -99,9 +102,9 @@ const read = async (selectSql) => {
   }
 };
 
-const create = async (sql) => {
+const create = async (sql, record) => {
   try {
-    const status = await database.query(sql);
+    const status = await database.query(sql, record);
     const recoverRecordSql = buildSubjectsSelectSql(status[0].insertId, null);
     const { isSuccess, result, message } = await read(recoverRecordSql);
 
@@ -142,7 +145,7 @@ const postSubjectsController = async (req, res) => {
 
   // Access data
   const sql = buildSubjectsInsertSql(req.body);
-  const { isSuccess, result, message } = await create(sql);
+  const { isSuccess, result, message } = await create(sql, req.body);
   if (!isSuccess) return res.status(404).json({ message });
 
   // Responses
