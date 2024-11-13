@@ -141,8 +141,6 @@ const getSubjectsController = async (req, res, variant) => {
 };
 
 const postSubjectsController = async (req, res) => {
-  //const id = req.params.id; // Undefined in the case of the /api/subjects endpoint
-
   // Access data
   const sql = buildSubjectsInsertSql(req.body);
   const { isSuccess, result, message } = await create(sql, req.body);
