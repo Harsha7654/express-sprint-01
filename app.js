@@ -76,7 +76,7 @@ const buildSubjectsInsertSql = (record) => {
   return `INSERT INTO ${table} SET
             SubjectName="${record["SubjectName"]}",
             SubjectImageURL="${record["SubjectImageURL"]}",
-            SubjectLecturerID="${record["SubjectLecturerID"]}",
+            SubjectLecturerID="${record["SubjectLecturerID"]}"
   `;
 };
 
