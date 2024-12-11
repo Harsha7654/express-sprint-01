@@ -83,6 +83,17 @@ const buildSubjectsInsertSql = (record) => {
   return `INSERT INTO ${table} ` + buildSetFields(mutableFields);
 };
 
+const buildSubjectsUpdateSql = () => {
+  let table = "Subjects";
+  const mutableFields = ["SubjectName", "SubjectImageURL", "SubjectLecturerID"];
+
+  return (
+    `UPDATE ${table} ` +
+    buildSetFields(mutableFields) +
+    ` WHERE SubjectID=:SubjectID`
+  );
+};
+
 const read = async (selectSql) => {
   try {
     const [result] = await database.query(selectSql);
@@ -150,6 +161,18 @@ const postSubjectsController = async (req, res) => {
   res.status(201).json(result);
 };
 
+const putSubjectsController = async (req, res) => {
+  // Validate request
+  const id = req.params.id;
+  const record = req.body;
+  // Access data
+  const sql = buildSubjectsUpdateSql();
+  const { isSuccess, result, message } = await create(sql, req.body);
+  if (!isSuccess) return res.status(404).json({ message });
+
+  // Responses
+  res.status(201).json(result);
+};
 // Endpoints ------------------------------------
 // Examples to help understand basics:
 app.get("/hello", helloController);
@@ -168,6 +191,8 @@ app.get("/api/subjects/users/:id", (req, res) =>
 );
 
 app.post("/api/subjects", postSubjectsController);
+
+app.put("/api/subjects/:id", putSubjectsController);
 
 //Alternative endpoint syntax:
 app.get("/api/users/:id/subjects", (req, res) =>
