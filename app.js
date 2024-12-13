@@ -76,7 +76,7 @@ const buildSetFields = (fields) =>
     "SET "
   );
 
-const buildSubjectsInsertSql = (record) => {
+const buildSubjectsInsertSql = () => {
   let table = "Subjects";
   const mutableFields = ["SubjectName", "SubjectImageURL", "SubjectLecturerID"];
 
@@ -139,6 +139,32 @@ const create = async (sql, record) => {
   }
 };
 
+const update = async (sql, id, record) => {
+  try {
+    const status = await database.query(sql, { ...record, SubjectID: id });
+    const recoverRecordSql = buildSubjectsSelectSql(id, null);
+    const { isSuccess, result, message } = await read(recoverRecordSql);
+
+    return isSuccess
+      ? {
+          isSuccess: true,
+          result: result,
+          message: "Record successfully recovered",
+        }
+      : {
+          isSuccess: false,
+          result: null,
+          message: `Failed to recover the inserted record: ${message}`,
+        };
+  } catch (error) {
+    return {
+      isSuccess: false,
+      result: null,
+      message: `Failed to execute query: ${error.message}`,
+    };
+  }
+};
+
 const getSubjectsController = async (req, res, variant) => {
   const id = req.params.id; // Undefined in the case of the /api/subjects endpoint
 
@@ -153,7 +179,7 @@ const getSubjectsController = async (req, res, variant) => {
 
 const postSubjectsController = async (req, res) => {
   // Access data
-  const sql = buildSubjectsInsertSql(req.body);
+  const sql = buildSubjectsInsertSql();
   const { isSuccess, result, message } = await create(sql, req.body);
   if (!isSuccess) return res.status(404).json({ message });
 
@@ -167,11 +193,11 @@ const putSubjectsController = async (req, res) => {
   const record = req.body;
   // Access data
   const sql = buildSubjectsUpdateSql();
-  const { isSuccess, result, message } = await create(sql, req.body);
+  const { isSuccess, result, message } = await update(sql, id, record);
   if (!isSuccess) return res.status(404).json({ message });
 
   // Responses
-  res.status(201).json(result);
+  res.status(200).json(result);
 };
 // Endpoints ------------------------------------
 // Examples to help understand basics:
